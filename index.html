@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>1e2048</title>
+  <script src="vue.js"></script>
+  <script src="break_eternity.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #faf8ef, #f2e8d5);
+      color: #776e65;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 15px;
+      overflow-x: hidden;
+    }
+
+    #app {
+      max-width: 500px;
+      width: 100%;
+      padding: 15px;
+      position: relative;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .title-container {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      color: #776e65;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: #776e65;
+      opacity: 0.8;
+      margin-top: 3px;
+    }
+
+    .scores {
+      display: flex;
+      gap: 8px;
+      margin-top: 5px;
+    }
+
+    .score-box {
+      background: #bbada0;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      text-align: center;
+      min-width: 80px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .score-title {
+      font-size: 0.85rem;
+      color: #eee4da;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .score-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      gap: 15px;
+    }
+
+    .instructions {
+      font-size: 1rem;
+      max-width: 100%;
+      line-height: 1.4;
+      font-weight: 500;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .restart-btn {
+      background: #8f7a66;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s;
+      min-width: 120px;
+    }
+
+    .restart-btn:hover {
+      background: #7f6a56;
+      transform: translateY(-2px);
+    }
+
+    .restart-btn:active {
+      transform: translateY(1px);
+    }
+
+    .game-container {
+      position: relative;
+      background: #bbada0;
+      border-radius: 10px;
+      width: 100%;
+      padding-bottom: 100%;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    .grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 8px;
+      padding: 8px;
+    }
+
+    .cell {
+      position: absolute;
+      background: rgba(238, 228, 218, 0.35);
+      border-radius: 6px;
+      box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.05);
+      width: calc(22% - 8px);
+      height: calc(22% - 8px);
+    }
+
+    .tile {
+      position: absolute;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: calc(22% - 8px);
+      height: calc(22% - 8px);
+      border-radius: 6px;
+      font-size: 1.8rem;
+      font-weight: 800;
+      z-index: 10;
+      transition: all 0.15s ease;
+      animation: appear 0.2s ease;
+    }
+
+    @keyframes appear {
+      0% {
+        transform: scale(0.5);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    
+    .tile-NaN {
+      background: linear-gradient(#ff9999, #ffff99, #99ff99, #99ffff, #9999ff);
+      color: #006365;
+    }
+
+    .tile-1 {
+      background: #eee4da;
+      color: #776e65;
+    }
+
+    .tile-2 {
+      background: #ede0c8;
+      color: #776e65;
+    }
+
+    .tile-3 {
+      background: #f2b179;
+      color: white;
+    }
+
+    .tile-4 {
+      background: #f59563;
+      color: white;
+    }
+
+    .tile-5 {
+      background: #f67c5f;
+      color: white;
+    }
+
+    .tile-6 {
+      background: #f65e3b;
+      color: white;
+    }
+
+    .tile-7 {
+      background: #edcf72;
+      color: white;
+      font-size: 1.7rem;
+    }
+
+    .tile-8 {
+      background: #edcc61;
+      color: white;
+      font-size: 1.6rem;
+    }
+
+    .tile-9 {
+      background: #edc850;
+      color: white;
+      font-size: 1.5rem;
+    }
+
+    .tile-10 {
+      background: #edc53f;
+      color: white;
+      font-size: 1.3rem;
+    }
+
+    .tile-11 {
+      background: #edc22e;
+      color: white;
+      font-size: 1.2rem;
+    }
+
+    .game-over {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(238, 228, 218, 0.85);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      0% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+
+    .game-over-text {
+      font-size: 3rem;
+      font-weight: 800;
+      color: #776e65;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+
+    .mobile-controls {
+      display: none;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 25px;
+      width: 100%;
+      max-width: 250px;
+      height: 250px;
+    }
+
+    .control-btn {
+      background: #8f7a66;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      touch-action: manipulation;
+    }
+
+    .up-btn {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .left-btn {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .down-btn {
+      grid-column: 2;
+      grid-row: 3;
+    }
+
+    .right-btn {
+      grid-column: 3;
+      grid-row: 2;
+    }
+
+    .win-message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(237, 194, 46, 0.9);
+      color: white;
+      padding: 15px 25px;
+      border-radius: 10px;
+      font-size: 2rem;
+      font-weight: 800;
+      z-index: 200;
+      text-align: center;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: translate(-50%, -50%) scale(1);
+      }
+      50% {
+        transform: translate(-50%, -50%) scale(1.05);
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    .game-upgrades {
+      margin-top: 25px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .upgrade-item {
+      background: #f5e5c9;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 0.95rem;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .upgrade-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .upgrade-btn {
+      background: #8f7a66;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      width: 100%;
+    }
+
+    .upgrade-btn:hover {
+      background: #7f6a56;
+    }
+
+    sup {
+      font-size: 50%;
+      transform: translateY(-5px);
+      display: inline-block;
+    }
+
+    /* 响应式调整 */
+    @media (max-width: 500px) {
+      #app {
+        padding: 10px;
+      }
+
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+      }
+
+      .scores {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .score-box {
+        min-width: 0;
+        width: calc(50% - 4px);
+        padding: 8px 10px;
+      }
+
+      .score-title {
+        font-size: 0.75rem;
+      }
+
+      .score-value {
+        font-size: 1.4rem;
+      }
+
+      .controls {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+      }
+
+      .instructions {
+        max-width: 100%;
+        font-size: 0.95rem;
+      }
+
+      .restart-btn {
+        width: 100%;
+        padding: 12px;
+      }
+
+      .tile {
+        font-size: 1.5rem;
+      }
+
+      .tile-7,
+      .tile-8,
+      .tile-9 {
+        font-size: 1.4rem;
+      }
+
+      .tile-10,
+      .tile-11 {
+        font-size: 1.1rem;
+      }
+
+      .game-over-text {
+        font-size: 2.2rem;
+      }
+
+      .mobile-controls {
+        display: grid;
+        margin: 20px auto 0;
+        height: 200px;
+      }
+
+      .game-upgrades {
+        margin-top: 20px;
+      }
+    }
+
+    @media (max-width: 350px) {
+      h1 {
+        font-size: 2.2rem;
+      }
+
+      .tile {
+        font-size: 1.3rem;
+      }
+
+      .tile-7,
+      .tile-8,
+      .tile-9 {
+        font-size: 1.2rem;
+      }
+
+      .tile-10,
+      .tile-11 {
+        font-size: 1rem;
+      }
+
+      .score-box {
+        padding: 6px 8px;
+      }
+
+      .score-value {
+        font-size: 1.2rem;
+      }
+
+      .mobile-controls {
+        height: 180px;
+      }
+
+      .game-over-text {
+        font-size: 1.8rem;
+      }
+    }
+    
+    .game-options {
+      width: 100%;
+      display: flex;
+      flex-direction: row;
+      margin: 10px 0;
+    }
+    
+    .option-btn {
+      flex: 1;
+      margin: 3px 6px;
+      text-align: center;
+      display: flex;
+      justify-content: center;
+      height: 100%;
+      padding: 5px 4px;
+      background-color: #8f7a66;
+      color: white;
+      border-radius: 5px;
+    }
+    
+    .upgrade-hint {
+      position: fixed;
+      width: 100px;
+      height: 30px;
+      background-color: #8f7a66;
+      color: white;
+      border-radius: 5px;
+      line-height: 30px;
+      text-align: center;
+      right: 10px;
+      top: 60px;
+      z-index: 9999;
+      transition-duration: 0.2s;
+    }
+    
+    .tile-bh {
+      font-size: 80%;
+      color: white;
+      background-color: black;
+    }
+    
+    .copyright {
+      color: #bdadaa;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div
+      v-if="someAffordable"
+      class="upgrade-hint"
+    >
+        ! 可购买升级
+    </div>
+    <div class="header">
+      <div class="title-container">
+        <h1>1e2048</h1>
+        <div class="subtitle">合并相同数字，获得高分！</div>
+      </div>
+      <div class="scores">
+        <div class="score-box">
+          <div class="score-title">分数</div>
+          <div class="score-value">{{ format(score) }}</div>
+        </div>
+        <div class="score-box">
+          <div class="score-title">最高分</div>
+          <div class="score-value">{{ format(bestScore) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="instructions">
+        <div v-if="bonusSteps > 0" style="margin-top: 8px; font-weight: 600; color: #d35400;">
+          隐藏方块合成！奖励：分数^{{ format(bonusExp) }}，剩余: {{ bonusSteps }}步
+        </div>
+        <div v-if="negUnlocked && !canFallVoid">
+          已解锁反向块，尝试消除屏幕的所有方块！当前反向块刷新概率: {{ format(negBlockChance * 100) }}%！
+        </div>
+        <div v-if="canFallVoid">
+          <span>已清空方块！点击按钮解锁第一层重置！</span>
+          <button class="restart-btn" v-on:click="fallVoid">重置</button>
+        </div>
+        <div v-if="voidUnlocked">你拥有 {{ format(voidPoints) }} 虚空点数。</div>
+      </div>
+      <button class="restart-btn" v-on:click="restartGame">
+        <i class="fas fa-redo"></i> 新游戏
+      </button>
+    </div>
+
+    <div
+      class="game-container"
+      v-on:touchstart="handleTouchStart"
+      v-on:touchmove.prevent="handleTouchMove"
+      v-on:touchend="handleTouchEnd"
+    >
+      <div
+        class="cell"
+        v-for="cell in 16"
+        :key="'cell-' + cell"
+        :style="styleObject((cell - 1) % 4, Math.floor((cell - 1) / 4))"></div>
+      <div
+        class="tile"
+        v-for="tile in tiles"
+        :key="'tile-' + tile.id"
+        :class="getClass(tile.value, tile.type)"
+        :style="styleObject(tile.x, tile.y)"
+        v-html="formatTile(tile.value, tile.type)"
+      ></div>
+      <div
+        class="game-over"
+        v-if="gameOver"
+      >
+        <div class="game-over-text">游戏结束!</div>
+        <button
+          class="restart-btn"
+          v-on:click="restartGame"
+        >
+          再试一次
+         </button>
+      </div>
+    </div>
+
+    <div class="game-upgrades">
+      <div class="upgrade-item">
+        <div class="upgrade-info">
+          <span>乘方块刷新概率：{{ format(powChance * 100) }}%</span>
+        </div>
+        <button class="upgrade-btn" v-on:click="buyPowChance()">价格：{{ format(powChanceCost) }} 分</button>
+      </div>
+      <div class="upgrade-item">
+        <div class="upgrade-info">
+          <span>基础格子：<span v-html="formatTile(baseBlock, 0)"></span></span>
+        </div>
+        <button class="upgrade-btn" v-on:click="buyBaseBlock()">价格：{{ format(baseBlockCost) }} 分</button>
+      </div>
+      <div class="upgrade-item">
+        <div class="upgrade-info">
+          <span v-if="negUnlocked">保留最大方块，重置反向块概率</span>
+          <span v-else-if="over1000">保留最大方块并将其他转换为分数</span>
+          <span v-else>保留最大方块 (每次升级获得一个)</span>
+        </div>
+        <button class="upgrade-btn" v-on:click="keepMax()">剩余次数：{{ clearTimes }}</button>
+      </div>
+    </div>
+    <div class="game-options">
+      <div
+        class="option-btn"
+        onclick="exportSave()"
+      >
+          导出存档
+      </div>
+      <div
+        class="option-btn"
+        onclick="importSave()"
+      >
+          导入存档
+      </div>
+      <div
+        class="option-btn"
+        onclick="saveGame()"
+      >
+          保存游戏
+      </div>
+    </div>
+    <div class="copyright">&copy; 2025-2026 aquamarine309. All rights reserved.</div>
+  </div>
+
+  <script src="main.js"></script>
+</body>""
+
+</html>
